@@ -20,6 +20,7 @@
 #include <TabView.h>
 
 #include "AntialiasingSettingsView.h"
+#include "ScalingSettingsView.h"
 #include "APRView.h"
 #include "defs.h"
 #include "FontView.h"
@@ -58,9 +59,13 @@ APRWindow::APRWindow(BRect frame)
 	fAntialiasingSettings = new AntialiasingSettingsView(
 		B_TRANSLATE("Antialiasing"));
 
+	fScalingSettings = new ScalingSettingsView(
+		B_TRANSLATE("Scaling"));
+
 	tabView->AddTab(fFontSettings);
 	tabView->AddTab(fColorsView);
 	tabView->AddTab(fLookAndFeelSettings);
+	tabView->AddTab(fScalingSettings);
 	tabView->AddTab(fAntialiasingSettings);
 	tabView->SetBorder(B_NO_BORDER);
 

@@ -11,6 +11,7 @@ Includes [ FGristFiles AntialiasingSettingsView.cpp ]
 Preference Appearance :
 	APRMain.cpp
 	AntialiasingSettingsView.cpp
+	ScalingSettingsView.cpp
 	LookAndFeelSettingsView.cpp
 	FakeScrollBar.cpp
 	FontSelectionView.cpp

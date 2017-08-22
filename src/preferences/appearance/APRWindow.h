@@ -21,6 +21,7 @@ class APRView;
 class AntialiasingSettingsView;
 class FontView;
 class LookAndFeelSettingsView;
+class ScalingSettingsView;
 
 
 class APRWindow : public BWindow {
@@ -38,6 +39,7 @@ private:
 		BButton*			fRevertButton;
 
 		AntialiasingSettingsView* fAntialiasingSettings;
+		ScalingSettingsView* fScalingSettings;
 		FontView*			fFontSettings;
 		LookAndFeelSettingsView*	fLookAndFeelSettings;
 };
