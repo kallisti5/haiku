@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015, Haiku, Inc. All Rights Reserved.
+ * Copyright 2011-2017, Haiku, Inc. All Rights Reserved.
  * Distributed under the terms of the MIT License.
  *
  * Authors:
@@ -36,6 +36,7 @@ static ssize_t
 dp_aux_speak(uint32 connectorIndex, uint8* send, int sendBytes,
 	uint8* recv, int recvBytes, uint8 delay, uint8* ack)
 {
+	radeon_shared_info &info = *gInfo->shared_info;
 	dp_info* dpInfo = &gConnector[connectorIndex]->dpInfo;
 	if (dpInfo->auxPin == 0) {
 		ERROR("%s: cannot speak on invalid GPIO pin!\n", __func__);
@@ -59,7 +60,8 @@ dp_aux_speak(uint32 connectorIndex, uint8* send, int sendBytes,
 	args.v2.ucDelay = delay / 10;
 
 	// Careful! This value differs in different atombios calls :-|
-	args.v2.ucHPD_ID = connector_pick_atom_hpdid(connectorIndex);
+	if (info.dceMajor >= 4)
+		args.v2.ucHPD_ID = connector_pick_atom_hpdid(connectorIndex);
 
 	unsigned char* base = (unsigned char*)(gAtomContext->scratch + 1);
 
@@ -69,9 +71,9 @@ dp_aux_speak(uint32 connectorIndex, uint8* send, int sendBytes,
 
 	atom_execute_table(gAtomContext, index, (uint32*)&args);
 
-	*ack = args.v2.ucReplyStatus;
+	*ack = args.v1.ucReplyStatus;
 
-	switch (args.v2.ucReplyStatus) {
+	switch (args.v1.ucReplyStatus) {
 		case 1:
 			ERROR("%s: dp_aux channel timeout!\n", __func__);
 			return B_TIMED_OUT;
@@ -117,6 +119,11 @@ dp_aux_transaction(uint32 connectorIndex, dp_aux_msg* message)
 		case DP_AUX_NATIVE_WRITE:
 		case DP_AUX_I2C_WRITE:
 		case DP_AUX_I2C_WRITE_STATUS_UPDATE:
+			if (message->size > 12) {
+				ERROR("%s: Too many tx bytes! (%" B_PRIuSIZE ")\n", __func__,
+					message->size);
+				return B_ERROR;
+			}
 			transactionSize += message->size;
 			break;
 	}
@@ -129,8 +136,8 @@ dp_aux_transaction(uint32 connectorIndex, dp_aux_msg* message)
 
 	uint8 auxMessage[20];
 	auxMessage[0] = message->address & 0xff;
-	auxMessage[1] = message->address >> 8;
-	auxMessage[2] = message->request << 4;
+	auxMessage[1] = (message->address >> 8) & 0xff;
+	auxMessage[2] = (message->request << 4) | ((message->address >> 16) & 0xf);
 	auxMessage[3] = message->size ? (message->size - 1) : 0;
 
 	if (message->size == 0)
@@ -153,7 +160,7 @@ dp_aux_transaction(uint32 connectorIndex, dp_aux_msg* message)
 			case DP_AUX_NATIVE_READ:
 			case DP_AUX_I2C_READ:
 				result = dp_aux_speak(connectorIndex, auxMessage,
-					transactionSize, (uint8*)message->buffer, message->size,
+					transactionSize, message->buffer, message->size,
 					delay, &ack);
 				break;
 			default:
@@ -219,7 +226,7 @@ dpcd_reg_read(uint32 connectorIndex, uint16 address)
 	memset(&message, 0, sizeof(message));
 
 	message.address = address;
-	message.buffer = &response;
+	message.buffer = response;
 	message.request = DP_AUX_NATIVE_READ;
 	message.size = 1;
 

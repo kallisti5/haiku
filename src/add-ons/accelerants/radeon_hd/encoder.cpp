@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2012, Haiku, Inc. All Rights Reserved.
+ * Copyright 2006-2017, Haiku, Inc. All Rights Reserved.
  * Distributed under the terms of the MIT License.
  *
  * Authors:
@@ -1272,6 +1272,8 @@ transmitter_dig_setup(uint32 connectorIndex, uint32 pixelClock,
 	if (dpInfo->valid == true) {
 		dpClock = dpInfo->linkRate;
 		dpLaneCount = dpInfo->laneCount;
+	} else if (isDP) {
+		ERROR("%s: BUG: is DP but no valid dpInfo!\n", __func__);
 	}
 
 	switch (tableMajor) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2011, Haiku, Inc. All Rights Reserved.
+ * Copyright 2006-2017, Haiku, Inc. All Rights Reserved.
  * Distributed under the terms of the MIT License.
  *
  * Authors:
@@ -30,6 +30,11 @@
 #endif
 
 #define ERROR(x...) _sPrintf("radeon_hd: " x)
+
+
+// XXX: These atombios defines are too damn long for 80-char limits
+#define R_DATA_CLOCK_PATH_TYPE ATOM_ROUTER_DATA_CLOCK_PATH_SELECT_RECORD_TYPE
+#define R_DATA_CLOCK_PATH_RECORD ATOM_ROUTER_DATA_CLOCK_PATH_SELECT_RECORD
 
 
 static void
@@ -336,9 +341,27 @@ connector_attach_gpio_hpd(uint32 connectorIndex, uint8 hwPin)
     }
 
 	// We couldnt find the GPIO pin in the known GPIO pins.
-    TRACE("%s: can't find GPIO pin 0x%" B_PRIX8 " for connector %" B_PRIu32 "\n",
-        __func__, hwPin, connectorIndex);
+    TRACE("%s: can't find GPIO pin 0x%" B_PRIX8
+		" for connector %" B_PRIu32 "\n", __func__, hwPin, connectorIndex);
     return B_ERROR;
+}
+
+
+static status_t
+connector_attach_gpio_ddc(uint32 connectorIndex, uint8 hwPin)
+{
+	TRACE("%s: TODO: found router DDC pin 0x%" B_PRIX8
+		" for connector %" B_PRIu32 "\n", __func__, hwPin, connectorIndex);
+	return B_OK;
+}
+
+
+static status_t
+connector_attach_gpio_dc(uint32 connectorIndex, uint8 hwPin)
+{
+	TRACE("%s: TODO: found router DC pin 0x%" B_PRIX8
+		" for connector %" B_PRIu32 "\n", __func__, hwPin, connectorIndex);
+	return B_OK;
 }
 
 
@@ -646,6 +669,8 @@ connector_probe_legacy()
 status_t
 connector_probe()
 {
+	TRACE("%s: called\n", __func__);
+
 	int index = GetIndexIntoMasterTable(DATA, Object_Header);
 	uint8 tableMajor;
 	uint8 tableMinor;
@@ -853,6 +878,8 @@ connector_probe()
 							ATOM_I2C_RECORD* i2cRecord;
 							ATOM_I2C_ID_CONFIG_ACCESS* i2cConfig;
 							ATOM_HPD_INT_RECORD* hpdRecord;
+							ATOM_ROUTER_DDC_PATH_SELECT_RECORD* ddcPath;
+							R_DATA_CLOCK_PATH_RECORD* dcPath;
 
 							switch (record->ucRecordType) {
 								case ATOM_I2C_RECORD_TYPE:
@@ -868,6 +895,19 @@ connector_probe()
 									hpdRecord = (ATOM_HPD_INT_RECORD*)record;
 									connector_attach_gpio_hpd(connectorIndex,
 										hpdRecord->ucHPDIntGPIOID);
+									break;
+								case ATOM_ROUTER_DDC_PATH_SELECT_RECORD_TYPE:
+									ddcPath
+										= (ATOM_ROUTER_DDC_PATH_SELECT_RECORD*)
+											record;
+									connector_attach_gpio_ddc(connectorIndex,
+										ddcPath->ucMuxControlPin);
+									break;
+								case R_DATA_CLOCK_PATH_TYPE:
+									// AtomBIOS define short via define at top
+									dcPath = (R_DATA_CLOCK_PATH_RECORD*)record;
+									connector_attach_gpio_dc(connectorIndex,
+										dcPath->ucMuxControlPin);
 									break;
 							}
 

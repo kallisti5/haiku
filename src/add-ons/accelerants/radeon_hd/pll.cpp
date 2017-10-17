@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2011, Haiku, Inc. All Rights Reserved.
+ * Copyright 2006-2017, Haiku, Inc. All Rights Reserved.
  * Distributed under the terms of the MIT License.
  *
  * Authors:
@@ -751,7 +751,6 @@ pll_set(display_mode* mode, uint8 crtcID)
 	uint32 dp_clock = gConnector[connectorIndex]->dpInfo.linkRate;
 
 	pll->ssEnabled = false;
-
 	pll->pixelClock = mode->timing.pixel_clock;
 
 	radeon_shared_info &info = *gInfo->shared_info;
@@ -1036,7 +1035,7 @@ pll_set_external(uint32 clock)
 					// SetPixelClock provides the dividers.
 					args.v6.ulDispEngClkFreq
 						= B_HOST_TO_LENDIAN_INT32(clock / 10);
-					if (dceVersion == 601)
+					if (dceVersion == 601 || dceVersion >= 800)
 						args.v6.ucPpll = ATOM_EXT_PLL1;
 					else if (dceVersion >= 600)
 						args.v6.ucPpll = ATOM_PPLL0;
@@ -1205,6 +1204,36 @@ pll_shared_dp()
 
 
 /**
+ * pll_availability - Find if PLL is available on card for auto-assignment
+ *
+ * Returns bool if available
+ */
+bool
+pll_availability(uint32 pllID)
+{
+	radeon_shared_info &info = *gInfo->shared_info;
+	uint32 dceVersion = (info.dceMajor * 100) + info.dceMinor;
+
+	switch(pllID) {
+		case ATOM_PPLL0:
+			if (dceVersion == 601)
+				return false;
+			if (info.chipsetID == RADEON_KABINI
+				|| info.chipsetID == RADEON_MULLINS) {
+				return false;
+			}
+			break;
+		case ATOM_PPLL2:
+			// Only available for DP
+			if (dceVersion == 601)
+				return false;
+			break;
+	}
+	return true;
+}
+
+
+/**
  * pll_next_available - Find the next available PLL
  *
  * Returns the next available PLL
@@ -1212,30 +1241,36 @@ pll_shared_dp()
 uint32
 pll_next_available()
 {
-	radeon_shared_info &info = *gInfo->shared_info;
-	uint32 dceVersion = (info.dceMajor * 100) + info.dceMinor;
-
 	uint32 pllMask = pll_usage_mask();
 
-	if (dceVersion == 802 || dceVersion == 601) {
-		if (!(pllMask & (1 << ATOM_PPLL0)))
-			return ATOM_PPLL0;
+	if (pll_availability(ATOM_PPLL0)
+		&& !(pllMask & (1 << ATOM_PPLL0))) {
+		TRACE("%s: ATOM_PPLL0 next available!\n", __func__);
+		return ATOM_PPLL0;
 	}
 
-	if (!(pllMask & (1 << ATOM_PPLL1)))
+	if (pll_availability(ATOM_PPLL1)
+		&& !(pllMask & (1 << ATOM_PPLL1))) {
+		TRACE("%s: ATOM_PPLL1 next available!\n", __func__);
 		return ATOM_PPLL1;
-	if (dceVersion != 601) {
-		if (!(pllMask & (1 << ATOM_PPLL2)))
-			return ATOM_PPLL2;
 	}
-	// TODO: If this starts happening, we likely need to
-	// add the sharing of PLL's with identical clock rates
-	// (see radeon_atom_pick_pll in drm)
+
+	if (pll_availability(ATOM_PPLL2)
+		&& !(pllMask & (1 << ATOM_PPLL2))) {
+		TRACE("%s: ATOM_PPLL2 next available!\n", __func__);
+		return ATOM_PPLL2;
+	}
+
 	ERROR("%s: Unable to find a PLL! (0x%" B_PRIX32 ")\n", __func__, pllMask);
 	return ATOM_PPLL_INVALID;
 }
 
 
+/**
+ * pll_pick - Choose the best available PLL for a connector
+ *
+ * Returns status_t result
+ */
 status_t
 pll_pick(uint32 connectorIndex)
 {
@@ -1248,42 +1283,43 @@ pll_pick(uint32 connectorIndex)
 
 	pll->id = ATOM_PPLL_INVALID;
 
-	// DCE 6.1 APU, UNIPHYA requires PLL2
-	if (gConnector[connectorIndex]->encoder.objectID
-		== ENCODER_OBJECT_ID_INTERNAL_UNIPHY && !linkB) {
-		pll->id = ATOM_PPLL2;
-		return B_OK;
-	}
-
-	if (connector_is_dp(connectorIndex)) {
-		// If DP external clock, set to invalid except on DCE 6.1
-		if (gInfo->dpExternalClock && !(dceVersion == 601)) {
-			pll->id = ATOM_PPLL_INVALID;
+	if (dceVersion == 601) {
+		// DCE 6.1 APU, UNIPHYA requires PLL2
+		if (gConnector[connectorIndex]->encoder.objectID
+			== ENCODER_OBJECT_ID_INTERNAL_UNIPHY && !linkB) {
+			pll->id = ATOM_PPLL2;
 			return B_OK;
 		}
+	}
 
-		// DCE 6.1+, we can share DP PLLs. See if any other DP connectors
-		// have been assigned a PLL yet.
-		if (dceVersion >= 601) {
-			pll->id = pll_shared_dp();
-			if (pll->id != ATOM_PPLL_INVALID)
-				return B_OK;
-			// Continue through to pll_next_available
+	if (connector_is_dp(connectorIndex) && dceVersion >= 400) {
+		if (gInfo->dpExternalClock) {
+			// Leave invalid PLL
+			return B_OK;
 		} else if (dceVersion == 600) {
 			pll->id = ATOM_PPLL0;
 			return B_OK;
-		} else if (info.dceMajor >= 5) {
+		} else if (dceVersion == 500) {
 			pll->id = ATOM_DCPLL;
 			return B_OK;
+		} else if (dceVersion != 401) {
+			pll->id = pll_shared_dp();
+			if (pll->id != ATOM_PPLL_INVALID)
+				return B_OK;
 		}
 	}
 
-	if (info.dceMajor >= 4) {
-		pll->id = pll_next_available();
+	pll->id = pll_next_available();
+	if (pll->id != ATOM_PPLL_INVALID)
 		return B_OK;
+
+	if (dceVersion >= 400) {
+		// This is valid on old cards, but is weird for anything else.
+		ERROR("%s: BUG: guessing PLL 1 for connector %d!\n", __func__,
+			connectorIndex);
 	}
 
-	// TODO: Should return the CRTCID here.
+	// TODO: Should return the CRTCID here?
 	pll->id = ATOM_PPLL1;
 	return B_OK;
 }

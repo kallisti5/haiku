@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2011, Haiku, Inc. All Rights Reserved.
+ * Copyright 2006-2017, Haiku, Inc. All Rights Reserved.
  * Distributed under the terms of the MIT License.
  *
  * Authors:
@@ -280,14 +280,14 @@ radeon_init_accelerant(int device)
 	// print found connectors
 	debug_connectors();
 
+	// setup link on any DisplayPort connectors
+	dp_setup_connectors();
+
 	// setup encoders on each connector if needed
 	encoder_init();
 
 	// program external pll clock
 	pll_external_init();
-
-	// setup link on any DisplayPort connectors
-	dp_setup_connectors();
 
 	// detect attached displays
 	status = detect_displays();

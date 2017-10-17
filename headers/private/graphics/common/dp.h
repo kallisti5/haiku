@@ -37,7 +37,7 @@ typedef struct {
 	uint16	address;
 	uint8	request;
 	uint8	reply;
-	void*	buffer;
+	uint8*	buffer;
 	size_t	size;
 } dp_aux_msg;
 

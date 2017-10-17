@@ -106,6 +106,7 @@ status_t pll_set_external(uint32 clock);
 status_t pll_set_dce(uint32 clock, uint8 clockType, uint8 clockSource);
 
 status_t pll_adjust(pll_info* pll, display_mode* mode, uint8 crtcID);
+bool pll_availability(uint32 pllID);
 uint32 pll_usage_mask();
 uint32 pll_usage_count(uint32 pllID);
 uint32 pll_shared_dp();
