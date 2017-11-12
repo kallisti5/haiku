@@ -76,6 +76,13 @@ enum {
 	B_SCREEN_TO_SCREEN_SCALED_FILTERED_BLIT,	/* optional.
 		NOTE: source and dest may NOT overlap */
 
+	/* 3D acceleration (experimental) */
+	B_GPU_CAPABILITIES = 0x500,			/* optional */
+	B_GPU_LOCK,							/* optional */
+	B_GPU_UNLOCK,						/* optional */
+	B_GPU_MAP,							/* optional */
+	B_GPU_UNMAP,						/* optional */
+
 	/* 3D acceleration */
 	B_ACCELERANT_PRIVATE_START = (int)0x80000000
 };
