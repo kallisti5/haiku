@@ -26,9 +26,10 @@
 #include <arch/generic/debug_uart_8250.h>
 
 
-DebugUART8250::DebugUART8250(addr_t base, int64 clock)
+DebugUART8250::DebugUART8250(addr_t base, int32 shift, int64 clock)
 	:
-	DebugUART(base, clock)
+	DebugUART(base, clock),
+	fShift(shift)
 {
 }
 

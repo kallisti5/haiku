@@ -50,6 +50,7 @@ debug_uart_from_fdt(const void *fdt)
 	phys_addr_t regs;
 	int32 clock = 0;
 	int32 speed = 0;
+	int32 shift = 0;
 	const void *prop;
 	DebugUART *uart = NULL;
 
@@ -88,6 +89,13 @@ debug_uart_from_fdt(const void *fdt)
 		TRACE(("serial: clock %ld\n", clock));
 	}
 
+	// get any potental register shifting
+	prop = fdt_getprop(fdt, node, "reg-shift", &len);
+	if (prop && len == 4) {
+		shift = fdt32_to_cpu(*(uint32_t *)prop);
+		TRACE(("serial: reg-shift: %ld\n", shift));
+	}
+
 	// get current speed (XXX: not yet passed over)
 	prop = fdt_getprop(fdt, node, "current-speed", &len);
 	if (prop && len == 4) {
@@ -100,8 +108,15 @@ debug_uart_from_fdt(const void *fdt)
 	if (fdt_node_check_compatible(fdt, node, "ns16550a") == 0
 		|| fdt_node_check_compatible(fdt, node, "ns16550") == 0) {
 		TRACE(("serial: Found 8250 serial UART!\n"));
-		uart = arch_get_uart_8250(regs, clock);
+		uart = arch_get_uart_8250(regs, shift, clock);
 	#ifdef __ARM__
+	} else if (fdt_node_check_compatible(fdt, node, "snps,dw-apb-uart") == 0) {
+		TRACE(("serial: Found sunxi 8250 serial UART!\n"));
+		if (clock == 0) {
+			// HACK: Guess sunxi osc24M clock is in use. Need CCU support.
+			clock = 24000000;
+		}
+		uart = arch_get_uart_8250(regs, shift, clock);
 	} else if (fdt_node_check_compatible(fdt, node, "ti,omap3-uart") == 0
 		|| fdt_node_check_compatible(fdt, node, "ti,omap4-uart") == 0
 		|| fdt_node_check_compatible(fdt, node, "ti,omap5-uart") == 0
@@ -110,7 +125,7 @@ debug_uart_from_fdt(const void *fdt)
 		|| fdt_node_check_compatible(fdt, node, "ti,dra742-uart") == 0) {
 		// TODO: ti,am* and ti,dr* have some special quirks.
 		TRACE(("serial: Found omap 8250 serial UART!\n"));
-		uart = arch_get_uart_8250_omap(regs, clock);
+		uart = arch_get_uart_8250_omap(regs, shift, clock);
 	} else if (fdt_node_check_compatible(fdt, node, "arm,pl011") == 0
 		|| fdt_node_check_compatible(fdt, node, "arm,primecell") == 0) {
 		TRACE(("serial: Found pl011 serial UART!\n"));

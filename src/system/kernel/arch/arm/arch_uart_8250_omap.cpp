@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2012 Haiku, Inc. All rights reserved.
+ * Copyright 2011-2017 Haiku, Inc. All rights reserved.
  * Distributed under the terms of the MIT License.
  *
  * Authors:
@@ -16,7 +16,8 @@
 
 class ArchUART8250Omap : public DebugUART8250 {
 public:
-							ArchUART8250Omap(addr_t base, int64 clock);
+							ArchUART8250Omap(addr_t base, int32 shift,
+								int64 clock);
 							~ArchUART8250Omap();
 	void					InitEarly();
 
@@ -26,9 +27,9 @@ public:
 };
 
 
-ArchUART8250Omap::ArchUART8250Omap(addr_t base, int64 clock)
+ArchUART8250Omap::ArchUART8250Omap(addr_t base, int32 shift, int64 clock)
 	:
-	DebugUART8250(base, clock)
+	DebugUART8250(base, shift, clock)
 {
 }
 
@@ -59,20 +60,20 @@ ArchUART8250Omap::InitEarly()
 void
 ArchUART8250Omap::Out8(int reg, uint8 value)
 {
-	*((uint8 *)Base() + reg * sizeof(uint32)) = value;
+	*((uint8 *)Base() + (reg << fShift) * sizeof(uint32)) = value;
 }
 
 
 uint8
 ArchUART8250Omap::In8(int reg)
 {
-	return *((uint8 *)Base() + reg * sizeof(uint32));
+	return *((uint8 *)Base() + (reg << fShift) * sizeof(uint32));
 }
 
 
-DebugUART8250 *arch_get_uart_8250_omap(addr_t base, int64 clock)
+DebugUART8250 *arch_get_uart_8250_omap(addr_t base, int32 shift, int64 clock)
 {
 	static char buffer[sizeof(ArchUART8250Omap)];
-	ArchUART8250Omap *uart = new(buffer) ArchUART8250Omap(base, clock);
+	ArchUART8250Omap *uart = new(buffer) ArchUART8250Omap(base, shift, clock);
 	return uart;
 }
