@@ -1,0 +1,21 @@
+SubDir HAIKU_TOP src apps reporter ;
+
+UsePrivateHeaders shared ;
+
+Application Reporter :
+	main.cpp
+	ReporterApp.cpp
+	ReporterWindow.cpp
+	ChoiceView.cpp
+	IntroView.cpp
+	: be translation shared [ TargetLibsupc++ ] localestub
+	: Reporter.rdef
+;
+
+DoCatalogs Reporter :
+	x-vnd.Haiku-Reporter
+	:
+	ReporterApp.cpp
+	ReporterWindow.cpp
+	IntroView.cpp
+;
