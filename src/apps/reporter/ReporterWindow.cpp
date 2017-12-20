@@ -9,6 +9,7 @@
 
 #include "ReporterWindow.h"
 
+#include <Application.h>
 #include <Button.h>
 #include <Catalog.h>
 #include <LayoutBuilder.h>
@@ -32,6 +33,14 @@ ReporterWindow::ReporterWindow(BRect frame)
 
 ReporterWindow::~ReporterWindow()
 {
+}
+
+
+bool
+ReporterWindow::QuitRequested()
+{
+	be_app->PostMessage(B_QUIT_REQUESTED);
+	return true;
 }
 
 

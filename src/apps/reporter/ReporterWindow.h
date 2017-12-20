@@ -20,6 +20,7 @@ public:
 							ReporterWindow(BRect frame);
 							~ReporterWindow();
 
+	bool					QuitRequested();
 	void					IntroductionStep();
 	void					DiagnoseStep();
 
