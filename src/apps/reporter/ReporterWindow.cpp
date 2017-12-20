@@ -18,7 +18,6 @@
 #define B_TRANSLATION_CONTEXT "Reporter Window"
 
 #define MSG_ACTION_NEXT 'next'
-#define MSG_ACTION_EXIT 'exit'
 
 
 ReporterWindow::ReporterWindow(BRect frame)
@@ -45,6 +44,16 @@ ReporterWindow::QuitRequested()
 
 
 void
+ReporterWindow::MessageReceived(BMessage* msg)
+{
+	switch (msg->what) {
+		default:
+			be_app->PostMessage(msg);
+	}
+}
+
+
+void
 ReporterWindow::IntroductionStep()
 {
 	BButton* nextButton = new BButton("next", B_TRANSLATE("Continue"),
@@ -52,7 +61,7 @@ ReporterWindow::IntroductionStep()
 	nextButton->MakeDefault(true);
 
 	BButton* exitButton = new BButton("exit", B_TRANSLATE("Exit"),
-		new BMessage(MSG_ACTION_EXIT));
+		new BMessage(B_QUIT_REQUESTED));
 	fIntroView = new IntroView();
 	BLayoutBuilder::Group<>(this, B_VERTICAL)
 		.SetInsets(5, 5, 5, 5)
@@ -74,7 +83,7 @@ ReporterWindow::DiagnoseStep() {
 	nextButton->SetEnabled(false);
 
 	BButton* exitButton = new BButton("exit", B_TRANSLATE("Exit"),
-		new BMessage(MSG_ACTION_EXIT));
+		new BMessage(B_QUIT_REQUESTED));
 
 	BLayoutBuilder::Group<>(this, B_VERTICAL)
 		.SetInsets(5, 5, 5, 5)

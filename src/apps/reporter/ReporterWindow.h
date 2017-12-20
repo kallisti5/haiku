@@ -24,6 +24,8 @@ public:
 	void					IntroductionStep();
 	void					DiagnoseStep();
 
+	void					MessageReceived(BMessage* msg);
+
 private:
 	ChoiceView*				fChoiceView;
 	IntroView*				fIntroView;
